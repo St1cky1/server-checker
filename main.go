@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GOLANG-NINJA/pingrobot/workerpool"
+	"server_checker/workerpool"
 )
 
 const (
@@ -17,9 +17,9 @@ const (
 )
 
 var urls = []string{
-	"https://workshop.zhashkevych.com/",
-	"https://golang-ninja.com/",
-	"https://zhashkevych.com/",
+	"https://github.com/St1cky1",
+	"https://books.yandex.ru/?from=tableau_yabro",
+	"https://sokolov.ru/?utm_referrer=https%3A%2F%2Fwww.yandex.ru%2Fclck%2Fjsredir%3Ffrom%3Dyandex.ru%3Bsuggest%3Bbrowser%26text%3D",
 	"https://google.com/",
 	"https://golang.org/",
 }
