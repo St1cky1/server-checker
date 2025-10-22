@@ -1,0 +1,26 @@
+# config yaml
+
+interval: 10s # автоматически будет преобразовано в time.Duration
+request_timeout: 2s # таймаут для HTTP-запроса. Если время ответа превысит указанное, считаем сервер недоступным
+workers_count: 3 # количество воркеров
+
+urls: # слайс структур
+  - name: "Google"
+    url: "https://google.com/"
+    expected_status: 200
+
+  - name: "GitHub"
+    url: "https://github.com/St1cky1"
+    expected_status: 200
+
+  - name: "Sokolov"
+    url: "https://sokolov.ru/?utm_referrer=https%3A%2F%2Fwww.yandex.ru%2Fclck%2Fjsredir%3Ffrom%3Dyandex.ru%3Bsuggest%3Bbrowser%26text%3D"
+    expected_status: 200
+
+  - name: "Яндекс Книги"
+    url: "https://books.yandex.ru/?from=tableau_yabro"
+    expected_status: 200
+
+  - name: "Official Golang"
+    url: "https://golang.org/"
+    expected_status: 200

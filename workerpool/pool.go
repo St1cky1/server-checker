@@ -8,34 +8,50 @@ import (
 )
 
 type Job struct {
-	URL string
+	Name           string // читаемое имя
+	URL            string
+	ExpectedStatus int // ожидаемый статус
 }
 
 type Result struct {
-	URL          string
-	StatusCode   int
-	ResponseTime time.Duration
-	Error        error
+	Name           string
+	URL            string
+	ExpectedStatus int
+	StatusCode     int
+	ResponseTime   time.Duration
+	Error          error
 }
+
+// результаты выполнения с метриками
 
 func (r Result) Info() string {
 	if r.Error != nil {
-		return fmt.Sprintf("[ERROR] - [%s] - %s", r.URL, r.Error.Error())
+		return fmt.Sprintf("[ERROR] - %s [%s] - %s", r.Name, r.URL, r.Error.Error())
 	}
 
-	return fmt.Sprintf("[SUCCESS] - [%s] - Status: %d, Response Time: %s", r.URL, r.StatusCode, r.ResponseTime.String())
+	// Проверяем, совпадает ли ожидаемый статус с полученным
+	status := "SUCCESS"
+	if r.StatusCode != r.ExpectedStatus {
+		status = "WRONG STATUS"
+	}
+
+	return fmt.Sprintf("[%s] - [%s] - Status: %d (expected status: %d), Time: %s", status, r.Name, r.StatusCode, r.ExpectedStatus, r.ResponseTime.String())
 }
+
+// форматирование ответов
 
 type Pool struct {
 	worker       *worker
 	workersCount int
 
-	jobs    chan Job
-	results chan Result
+	jobs    chan Job    // канал для задач
+	results chan Result // канал для результатов
 
-	wg      *sync.WaitGroup
-	stopped bool
+	wg      *sync.WaitGroup // синхрон
+	stopped bool            // флаг для остановки
 }
+
+// управление работой воркеров
 
 func New(workersCount int, timeout time.Duration, results chan Result) *Pool {
 	return &Pool{
@@ -53,6 +69,8 @@ func (p *Pool) Init() {
 	}
 }
 
+// запускаем указанное количество воркеров
+
 func (p *Pool) Push(j Job) {
 	if p.stopped {
 		return
@@ -62,11 +80,15 @@ func (p *Pool) Push(j Job) {
 	p.wg.Add(1)
 }
 
+// добавляем задачу в пул
+
 func (p *Pool) Stop() {
 	p.stopped = true
 	close(p.jobs)
 	p.wg.Wait()
 }
+
+// дожидаемся завершения текущих задач и завершаем выполнение
 
 func (p *Pool) initWorker(id int) {
 	for job := range p.jobs {
@@ -77,3 +99,5 @@ func (p *Pool) initWorker(id int) {
 
 	log.Printf("[worker ID %d] finished proccesing", id)
 }
+
+// цикл работы воркеров

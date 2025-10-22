@@ -2,59 +2,68 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
-	"syscall"
-	"time"
-
 	"server_checker/workerpool"
+	"syscall" // системные вызовы (SIGTERM, SIGINT)
+	"time"
 )
-
-const (
-	INTERVAL        = time.Second * 10
-	REQUEST_TIMEOUT = time.Second * 2
-	WORKERS_COUNT   = 3
-)
-
-var urls = []string{
-	"https://github.com/St1cky1",
-	"https://books.yandex.ru/?from=tableau_yabro",
-	"https://sokolov.ru/?utm_referrer=https%3A%2F%2Fwww.yandex.ru%2Fclck%2Fjsredir%3Ffrom%3Dyandex.ru%3Bsuggest%3Bbrowser%26text%3D",
-	"https://google.com/",
-	"https://golang.org/",
-}
 
 func main() {
+	// загружавем конфигаруцию из файла yaml
+	config, err := LoadConfig("config.yaml") // Передаем наш путь
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err) // Если ошибка - фаталим
+	}
+
+	log.Printf("loaded configuration: %d workers, %d Urls, interval: %v", config.Workers_count, len(config.Urls), config.Interval) // логируем что мы загружаем
+	// fmt.Println(config.Urls[:])
+
 	results := make(chan workerpool.Result)
-	workerPool := workerpool.New(WORKERS_COUNT, REQUEST_TIMEOUT, results)
+	workerPool := workerpool.New(config.Workers_count, config.Request_timeout, results)
 
-	workerPool.Init()
+	workerPool.Init() // запускаем воркеров
 
-	go generateJobs(workerPool)
+	go generateJobs(workerPool, config)
 	go proccessResults(results)
 
+	// обработка сигналов для Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
-	<-quit
+	<-quit // блокируемся до получения сигнала
 
-	workerPool.Stop()
+	log.Println("Shutting down gracefully...")
+	workerPool.Stop() // останавливаем
+	log.Println("Server checker stooped")
 }
 
 func proccessResults(results chan workerpool.Result) {
-	go func() {
-		for result := range results {
-			fmt.Println(result.Info())
-		}
-	}()
+	defer close(results)
+	for result := range results {
+		fmt.Println(result.Info())
+	}
+
 }
 
-func generateJobs(wp *workerpool.Pool) {
-	for {
-		for _, url := range urls {
-			wp.Push(workerpool.Job{URL: url})
-		}
+// вывод в консоль
 
-		time.Sleep(INTERVAL)
+func generateJobs(wp *workerpool.Pool, config *Config) {
+	ticker := time.NewTicker(config.Interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		for _, urlConfig := range config.Urls {
+			wp.Push(workerpool.Job{
+				URL:            urlConfig.Url,
+				Name:           urlConfig.Name,
+				ExpectedStatus: urlConfig.ExpectedStatus,
+			})
+		}
+		log.Printf("Scheduled %d URLs for checking", len(config.Urls))
+
 	}
 }
+
+// через указанное время добавляем url для проверки
